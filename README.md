@@ -1,0 +1,2 @@
+# High Throughput Screening (HTS) Data Analysis
+This package is a collection of functions, scripts, and data designed to parse and analyze high throughput screening data for drug discovery. It's designed to use HTS plate data anddrug dosage metadata to generate statistical analyses and plots of synergy and IC50 information. Data is expected to be imported in `.xlsx` format. This package is updated and maintained by Maddy Jenner (doctoral researcher in the Yeh Lab at UNC Chapek Hill) and Jack Leary (Yeh Lab computational research assistant). 
