@@ -8,9 +8,9 @@
 #' @import openxlsx
 #' @export
 #' @examples
-#' readData(parent.dir = "path/to/data/dir/", sheet.name = "Sheet1", file.name = "file.xlsx")
+#' readData(parent.dir = "path/to/data/dir/", sheet.name = 1, file.name = "file.xlsx")
 
-readData <- function(parent.dir, file.name, sheet.name, col.names = TRUE) {
+readData <- function(parent.dir, file.name, sheet.name = 1, col.names = TRUE) {
   filepath <- sprintf("%s%s.xlsx",
                       parent.dir,
                       file.name)

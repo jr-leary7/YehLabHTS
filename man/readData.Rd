@@ -4,7 +4,7 @@
 \alias{readData}
 \title{Read .xlsx HTS data}
 \usage{
-readData(parent.dir, file.name, sheet.name, col.names = TRUE)
+readData(parent.dir, file.name, sheet.name = 1, col.names = TRUE)
 }
 \arguments{
 \item{parent.dir}{The directory within which the .xlsx file is located.}
@@ -19,5 +19,5 @@ readData(parent.dir, file.name, sheet.name, col.names = TRUE)
 This function reads in a \code{.xlsx} file, and outputs the name of the file being read before returning it. Useful for keeping track of data in large \code{for} loops.
 }
 \examples{
-readData(parent.dir = "path/to/data/dir/", sheet.name = "Sheet1", file.name = "file.xlsx")
+readData(parent.dir = "path/to/data/dir/", sheet.name = 1, file.name = "file.xlsx")
 }

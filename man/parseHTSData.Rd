@@ -4,15 +4,14 @@
 \alias{parseHTSData}
 \title{Parse raw HTS plate data}
 \usage{
-parseHTSData(n.anchor.drugs = 2, plate.size = 384, seed.use = 629)
+parseHTSData(seed.use = 629)
 }
 \arguments{
-\item{n.anchor.drugs}{The number of anchor drugs in the study. Defaults to 2.}
-
-\item{plate.size}{The number of wells in each plate. Defaults to 384.}
-
 \item{seed.use}{The random seed used to control stochasticity. Defaults to 629.}
 }
 \description{
 This functions imports HTS data in \code{.xlsx} format, parses it, and prepares it for synergy analysis.
+}
+\examples{
+parseHTSData()
 }
