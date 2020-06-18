@@ -5,7 +5,7 @@
 #' @param file.name The .xlsx file you wish to load.
 #' @param sheet.name Which sheet to load.
 #' @param col.names Should column names be loaded? Defaults to TRUE.
-#' @importfrom openxlsx read.xlsx
+#' @importFrom openxlsx read.xlsx
 #' @export
 #' @examples
 #' readData(parent.dir = "path/to/data/dir/", sheet.name = 1, file.name = "file.xlsx")

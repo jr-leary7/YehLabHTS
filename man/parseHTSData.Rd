@@ -10,7 +10,7 @@ parseHTSData(seed.use = 629)
 \item{seed.use}{The random seed used to control stochasticity. Defaults to 629.}
 }
 \description{
-This functions imports HTS data in \code{.xlsx} format, parses it, and prepares it for synergy analysis.
+This functions imports HTS data in \code{.xlsx} format, parses it, calculates cell viability, and prepares the data for synergy analysis.
 }
 \examples{
 parseHTSData()
