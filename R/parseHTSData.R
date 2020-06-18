@@ -4,6 +4,7 @@
 #' @param seed.use The random seed used to control stochasticity. Defaults to 629.
 #' @import highSCREEN
 #' @importFrom data.table rbindlist
+#' @importFrom openxlsx read.xlsx
 #' @export
 #' @examples
 #' parseHTSData()
@@ -55,7 +56,8 @@ parseHTSData <- function(seed.use = 629) {
                        Plate = plates,
                        Does = doses,
                        Row = rows,
-                       Column = columns)
+                       Column = columns,
+                       stringsAsFactors = FALSE)
     compound_list[[drug]] <- temp
   }
   # now coerce to a dataframe
@@ -78,7 +80,6 @@ parseHTSData <- function(seed.use = 629) {
                rep(library_key_2016$Dose4[drug], length(strsplit(library_key_2016$Plate1[4], ",")[[1]])),
                rep(library_key_2016$Dose5[drug], length(strsplit(library_key_2016$Plate1[5], ",")[[1]])),
                rep(library_key_2016$Dose6[drug], length(strsplit(library_key_2016$Plate1[6], ",")[[1]])))
-    rows <- rep(library_key$Row[drug], length(doses))
     columns <- c(rep(library_key_2016$Column1[drug], length(strsplit(library_key_2016$Plate1[1], ",")[[1]])),
                  rep(library_key_2016$Column2[drug], length(strsplit(library_key_2016$Plate1[2], ",")[[1]])),
                  rep(library_key_2016$Column3[drug], length(strsplit(library_key_2016$Plate1[3], ",")[[1]])),
@@ -86,21 +87,54 @@ parseHTSData <- function(seed.use = 629) {
                  rep(library_key_2016$Column5[drug], length(strsplit(library_key_2016$Plate1[5], ",")[[1]])),
                  rep(library_key_2016$Column6[drug], length(strsplit(library_key_2016$Plate1[6], ",")[[1]])))
     compound <- rep(library_key_2016$Compound[drug], length(doses))
+    rows <- rep(library_key$Row[drug], length(doses))
     temp <- data.frame(Compound = compound,
                        Plate = plates,
                        Does = doses,
                        Row = rows,
-                       Column = columns)
+                       Column = columns,
+                       stringsAsFactors = FALSE)
     compound_list[[drug]] <- temp
   }
-  # again coerce to dataframe
+  # coerce to dataframe
   compound_df_librarykey2016 <- rbindlist(compound_list)
 
   # finally, create a long version of the metadata dataframe
-  anchor_drugs <- c(unique(metadata$Anchor1), unique(metadata$Anchor2))
-  for (drug in seq(anchor_drugs)) {
-    # do once you leave lab
+  metadata_list <- list()
+  for (drug in seq(nrow(metadata))) {
+    # again, generalize this later
+    plates <- c(as.numeric(strsplit(metadata$A1PlateRange0[drug], ",")[[1]]),
+                as.numeric(strsplit(metadata$A1PlateRange1[drug], ",")[[1]]),
+                as.numeric(strsplit(metadata$A1PlateRange2[drug], ",")[[1]]),
+                as.numeric(strsplit(metadata$A1PlateRange3[drug], ",")[[1]]),
+                as.numeric(strsplit(metadata$A2PlateRange0[drug], ",")[[1]]),
+                as.numeric(strsplit(metadata$A2PlateRange1[drug], ",")[[1]]),
+                as.numeric(strsplit(metadata$A2PlateRange2[drug], ",")[[1]]),
+                as.numeric(strsplit(metadata$A2PlateRange3[drug], ",")[[1]]))
+    doses <- c(rep(metadata$A1Dose0[drug], length(strsplit(metadata$A1PlateRange0[drug], ",")[[1]])),
+               rep(metadata$A1Dose1[drug], length(strsplit(metadata$A1PlateRange1[drug], ",")[[1]])),
+               rep(metadata$A1Dose2[drug], length(strsplit(metadata$A1PlateRange2[drug], ",")[[1]])),
+               rep(metadata$A1Dose3[drug], length(strsplit(metadata$A1PlateRange3[drug], ",")[[1]])),
+               rep(metadata$A2Dose0[drug], length(strsplit(metadata$A2PlateRange0[drug], ",")[[1]])),
+               rep(metadata$A2Dose1[drug], length(strsplit(metadata$A2PlateRange1[drug], ",")[[1]])),
+               rep(metadata$A2Dose2[drug], length(strsplit(metadata$A2PlateRange2[drug], ",")[[1]])),
+               rep(metadata$A2Dose3[drug], length(strsplit(metadata$A2PlateRange3[drug], ",")[[1]])))
+    anchors <- c(rep(metadata$Anchor1[drug], length(doses) / 2),
+                 rep(metadata$Anchor2[drug], length(doses) / 2))
+    filenames <- rep(metadata$Filename[drug], length(doses))
+    lib_sheets <- rep(metadata$LibrarySheet[drug], length(doses))
+    samp_info <- rep(metadata$SampleInfo[drug], length(doses))
+    temp <- data.frame(Filename = filenames,
+                       SampleInfo = samp_info,
+                       LibrarySheet = lib_sheets,
+                       Anchor = anchors,
+                       Dose = doses,
+                       Plate = plates,
+                       stringsAsFactors = FALSE)
+    metadata_list[[drug]] <- temp
   }
+  # coerce to dataframe
+  metadata_df <- rbindlist(metadata_list)
 
   # load raw plate data into list
   HTS_data <- list()
@@ -117,7 +151,7 @@ parseHTSData <- function(seed.use = 629) {
     HTS_data[[file]] <- raw_data
     lib_sheets[[file]] <- library_sheet
     # plate info
-    plates_master <- rep(1:24, each = 16)
+    plates_master <- rep(1:21, each = 16)
     plates_unique <- unique(plates_master)
 
 
