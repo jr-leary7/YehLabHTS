@@ -33,6 +33,9 @@ parseHTSData <- function(seed.use = 629) {
     # plate info
     plates_master <- rep(1:21, each = 16)
     plates_unique <- unique(plates_master)
+    # normalize to DMSO on plate 1/2/3 depending on library drug dose
+
     # calculate viabilities
+
   }
 }
