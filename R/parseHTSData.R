@@ -40,6 +40,7 @@ parseHTSData <- function(seed.use = 629) {
   # create list containing library drug locations / doses & combine with anchor info
   drug_results <- list()
   for (i in seq(lib_sheets)) {
+    # create placeholder variable t to avoid editing original library key datasets
     if (lib_sheets[[i]] == "LibraryKey") {
       t <- library_key
     } else {
