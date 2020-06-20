@@ -11,6 +11,9 @@ reformatMetadata <- function() {
   metadata <- readData(parent.dir = "./data/",
                        file.name = "v3_YehLab_compound_library_synergy_screen_metadata",
                        col.names = TRUE)
+  m_temp <- readData(parent.dir = "./data/",
+                     file.name = "v3_YehLab_compound_library_synergy_screen_metadata",
+                     col.names = TRUE)
   # remove unecessary metadata
   metadata <- metadata[-c(3, 4, 6), ]
   # load library sheets
@@ -64,7 +67,7 @@ reformatMetadata <- function() {
   library_drugs <- unique(library_key_2016$Compound)
   compound_list <- list()
   for (drug in seq(library_drugs)) {
-    # make this generalizable later
+    # make this generalizable to a different plate size / experimental design later
     plates <- c(as.numeric(strsplit(library_key_2016[drug, ]$Plate1, ",")[[1]]),
                 as.numeric(strsplit(library_key_2016[drug, ]$Plate2, ",")[[1]]),
                 as.numeric(strsplit(library_key_2016[drug, ]$Plate3, ",")[[1]]),
@@ -99,7 +102,7 @@ reformatMetadata <- function() {
   # finally, create a long version of the metadata dataframe
   metadata_list <- list()
   for (anchor in seq(nrow(metadata))) {
-    # plates 1:3 always have dose=0 for anchor 1 & 2
+    # plates 1:3 always have dose=0 for anchor 1 & 2 (in this experiment)
     plates <- c(as.numeric(strsplit(metadata$A1PlateRange0[anchor], ",")[[1]]),
                 as.numeric(strsplit(metadata$A1PlateRange1[anchor], ",")[[1]]),
                 as.numeric(strsplit(metadata$A1PlateRange2[anchor], ",")[[1]]),
@@ -134,15 +137,8 @@ reformatMetadata <- function() {
 
   # save results and return as list
   results <- list(metadata_df, compound_df_librarykey, compound_df_librarykey2016)
-  saveRDS(results, file = "./data/metadata_and_library_key.Rds")
+  if (!file.exists("./data/metadata_and_library_key.Rds")) {
+    saveRDS(results, file = "./data/metadata_and_library_key.Rds")
+  }
   return(results)
-s}
-
-
-
-
-
-
-
-
-#### bullshit code I might need later if I fuck up####
+}
