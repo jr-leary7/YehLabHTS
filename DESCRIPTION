@@ -1,13 +1,13 @@
 Package: YehLabHTS
-Title: What the Package Does (One Line, Title Case)
+Title: This package makes the Yeh Lab's HTS drug discovery analyses reproducible. 
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Leary",
+           family = "Jack",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
+           email = "jrleary@live.unc.edu",
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+Description: This package contains functions that parse raw HTS plate data and metadata. After the data is cleaned, we store it for further visualization and analysis.
 License: `use_mit_license()`, `use_gpl3_license()` or friends to
     pick a license
 Encoding: UTF-8
