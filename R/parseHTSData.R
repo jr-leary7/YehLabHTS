@@ -11,10 +11,9 @@
 parseHTSData <- function(seed.use = 629) {
   set.seed(seed.use)  # not explicitly needed, but just in case
   # load metadata & library keys
-  temp <- results
-  metadata <- temp[[1]]
-  library_key <- temp[[2]]
-  library_key_2016 <- temp[[3]]
+  metadata <- results[[1]]
+  library_key <- results[[2]]
+  library_key_2016 <- results[[3]]
 
   # load raw plate data into list & create matching library key list
   HTS_data <- list()
@@ -64,15 +63,15 @@ parseHTSData <- function(seed.use = 629) {
     # save drug_results[[i]] as temp var t (again) to avoid editing original data
     t <- drug_results[[i]]
     t$normalized <- NA  # pre-allocate length for memory reasons -- don't worry about it
+    t$inhibition <- NA
     DMSO <- c(HTS_data[[1]][1:8, 1],
               HTS_data[[2]][1:8, 1],
               HTS_data[[3]][1:8, 1])
     mean_DMSO <- mean(DMSO)
     t$normalized <- t$RawScore / mean_DMSO * 100
+    t$inhibition <- 100 - t$normalized
     drug_results[[i]] <- t
   }
-
-  # add cell viability
 }
 
 
