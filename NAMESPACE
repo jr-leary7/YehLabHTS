@@ -3,6 +3,5 @@
 export(parseHTSData)
 export(readData)
 export(reformatMetadata)
-import(highSCREEN)
 importFrom(data.table,rbindlist)
 importFrom(openxlsx,read.xlsx)

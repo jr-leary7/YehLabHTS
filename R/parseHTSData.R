@@ -1,8 +1,7 @@
 #' Parse raw HTS plate data
 #'
-#' This functions imports HTS data in `.xlsx` format, parses it, calculates cell viability, and prepares the data for synergy analysis.
+#' This functions imports HTS data in `.xlsx` format, parses and normalizes it, calculates cell viability (bliss).
 #' @param seed.use The random seed used to control stochasticity. Defaults to 629.
-#' @import highSCREEN
 #' @importFrom data.table rbindlist
 #' @importFrom openxlsx read.xlsx
 #' @export
@@ -12,7 +11,7 @@
 parseHTSData <- function(seed.use = 629) {
   set.seed(seed.use)  # not explicitly needed, but just in case
   # load metadata & library keys
-  temp <- reformatMetadata()
+  temp <- results
   metadata <- temp[[1]]
   library_key <- temp[[2]]
   library_key_2016 <- temp[[3]]
@@ -22,9 +21,7 @@ parseHTSData <- function(seed.use = 629) {
   lib_sheets <- list()
   for (file in seq(unique(metadata$Filename))) {
     # load raw HTS data
-    raw_data <- readData(parent.dir = "./data/rawdata/",
-                         file.name = metadata$Filename[file],
-                         col.names = FALSE)
+    raw_data <- raw_list[[file]]
     # plate info
     raw_data$Plate_ID <- rep(NA, nrow(raw_data))
     raw_data$Plate_ID <- rep(1:21, each = 16)
@@ -40,7 +37,7 @@ parseHTSData <- function(seed.use = 629) {
   # create list containing library drug locations / doses & combine with anchor info
   drug_results <- list()
   for (i in seq(lib_sheets)) {
-    # create placeholder variable t to avoid editing original library key datasets
+    # create temp var t to avoid editing original library key datasets
     if (lib_sheets[[i]] == "LibraryKey") {
       t <- library_key
     } else {
@@ -62,14 +59,21 @@ parseHTSData <- function(seed.use = 629) {
     drug_results[[i]] <- t
   }
 
-  # normalize each raw value
+  # normalize each raw value according to DMSO on first plate of each
   for (i in seq(drug_results)) {
-
+    # save drug_results[[i]] as temp var t (again) to avoid editing original data
+    t <- drug_results[[i]]
+    t$normalized <- NA  # pre-allocate length for memory reasons -- don't worry about it
+    DMSO <- c(HTS_data[[1]][1:8, 1],
+              HTS_data[[2]][1:8, 1],
+              HTS_data[[3]][1:8, 1])
+    mean_DMSO <- mean(DMSO)
+    t$normalized <- t$RawScore / mean_DMSO * 100
+    drug_results[[i]] <- t
   }
+
+  # add cell viability
 }
-
-
-
 
 
 

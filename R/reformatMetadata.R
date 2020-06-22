@@ -11,11 +11,9 @@ reformatMetadata <- function() {
   metadata <- readData(parent.dir = "./data/",
                        file.name = "v3_YehLab_compound_library_synergy_screen_metadata",
                        col.names = TRUE)
-  m_temp <- readData(parent.dir = "./data/",
-                     file.name = "v3_YehLab_compound_library_synergy_screen_metadata",
-                     col.names = TRUE)
   # remove unecessary metadata
-  metadata <- metadata[-c(3, 4, 6), ]
+  metadata <- metadata[-c(3, 4), ]  # files we don't want
+  metadata <- na.omit(metadata)  # necessary to parse correctly
   # load library sheets
   library_key <- readData(parent.dir = "./data/",
                           file.name = "v3_YehLab_compound_library_synergy_screen_metadata",
@@ -135,10 +133,20 @@ reformatMetadata <- function() {
   # coerce to dataframe
   metadata_df <- rbindlist(metadata_list)
 
-  # save results and return as list
-  results <- list(metadata_df, compound_df_librarykey, compound_df_librarykey2016)
-  if (!file.exists("./data/metadata_and_library_key.Rds")) {
-    saveRDS(results, file = "./data/metadata_and_library_key.Rds")
+  # save raw plate data in a list so that it can be a global environment variable later
+  raw_list <- list()
+  for (file in unique(metadata$Filename)) {
+    raw_list[[file]] <- readData(parent.dir = "./data/rawdata/",
+                                 file.name = file,
+                                 col.names = FALSE)
   }
-  return(results)
+  # save raw plate data
+  names(raw_list) <- unique(metadata$Filename)
+  save(raw_list, file = "./data/raw_plates.RData")
+
+  # save metadata and library_key sheets
+  results <- list(metadata_df, compound_df_librarykey, compound_df_librarykey2016)
+  save(results, file = "./data/metadata_and_library_key.RData")
+
+  return("Parsing completed successfully !")
 }
