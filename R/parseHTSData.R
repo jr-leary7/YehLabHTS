@@ -74,5 +74,5 @@ parseHTSData <- function(seed.use = 629) {
     t$inhibition <- 100 - t$normalized
     drug_results[[i]] <- t
   }
-  save(drug_results, file = "./data/normalized_data.RData")
+  save(drug_results, file = "./data/normalized_data.RData")  # this is loaded into the global environment upon library(YehLabHTS)
 }
