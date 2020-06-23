@@ -11,6 +11,8 @@
 parseHTSData <- function(seed.use = 629) {
   set.seed(seed.use)  # not explicitly needed, but just in case
   # load metadata & library keys
+  data("raw_plates")  # called raw_list in global environment
+  data("metadata_and_library_key")  # called results in global environment
   metadata <- results[[1]]
   library_key <- results[[2]]
   library_key_2016 <- results[[3]]
@@ -72,8 +74,5 @@ parseHTSData <- function(seed.use = 629) {
     t$inhibition <- 100 - t$normalized
     drug_results[[i]] <- t
   }
+  save(drug_results, file = "./data/normalized_data.RData")
 }
-
-
-
-

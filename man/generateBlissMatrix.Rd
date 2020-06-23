@@ -10,7 +10,7 @@ generateBlissMatrix(drug.data)
 \item{drug.data}{The input anchor / drug data.}
 }
 \description{
-This function, given an input dataframe containing info on library dose, anchor dose, and inhibition, generates a list of bliss matrices for each combination. The matrix is intended to be later used as input to \code{pheatmap}.
+This function, given an input dataframe containing info on library dose, anchor dose, and inhibition, generates a list of bliss matrices for each combination. The matrix is intended to be later used as input to a heatmap function.
 }
 \examples{
 generateBlissMatrix(drug.data = my_data)
