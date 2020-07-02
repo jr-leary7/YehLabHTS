@@ -1,0 +1,17 @@
+#' Results from an HTS drug  discoveryexperiment
+#'
+#' A dataset containing anchor and library drugs & their doses, as well as other relevant information.
+#' @format A list of *n* dataframes containing the following variables:
+#'  \describe{
+#'    \item{Compound}{Library drug name}
+#'    \item{Plate}{Library drug plate}
+#'    \item{Dose}{Library drug dosage}
+#'    \item{Row}{Which row the library drug/dose is located on}
+#'    \item{Column}{Which column the library drug/dose is located on}
+#'    \item{Anchor}{Anchor drug name}
+#'    \item{AnchorDose}{Anchor drug dosage}
+#'    \item{RawScore}{The raw HTS plate response}
+#'    \item{normalized}{Cell viability, calculated as (raw score / mean DMSO score) * 100}
+#'    \item{inhibition}{Percent inhibition, calculated as 100 - cell viability}
+#'  }
+"drug_results"
