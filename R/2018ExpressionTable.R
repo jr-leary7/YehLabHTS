@@ -1,3 +1,4 @@
+library(xlsx)
 library(data.table)
 library(tidyverse)
 library(data.table)
@@ -11,13 +12,13 @@ library(NormExpression)
 library(dendextend)
 library(SCnorm)
 library(edgeR)
+library(fastICA)
 
 setwd("~/YehLabHTS")
 load("/Volumes/Jen Jen Yeh Lab/RNAseq/RData/Yeh_Salmon.RData")
 
-seqMetadata <- readData(parent.dir = "./data/",
-                          file.name = "Sequenced_PDX_CAF_lines",
-                          col.names = TRUE)
+seqMetadata <- read.xlsx(file = "./data/Sequenced_PDX_CAF_lines.xlsx", 1,
+                        header = TRUE)
 
 # P140710N1 was also in the screen but removed from analysis due to
 # a cell line mix-up: P140710N1 matches P140227T1 for STR
@@ -48,6 +49,12 @@ invitroExpression <- data.matrix(invitroExpression, rownames.force = NA)
 loginvitroExpression <- log(invitroExpression +1)
 plot(loginvitroExpression)
 
+# normalization
+lib.size <- sum(d$sample1)
+scale.factors <- calcNormFactors(loginvitroExpression, method = "TMM")
+RPKM <- rpkm(scale.factors)
+norm.data <- t(t(TMM$sample1)/(scale.factors*lib.size))
+
 ##########
 # NMF using CoGAPS
 
@@ -62,8 +69,10 @@ NMFResult <- function(expressionMatrix){
   # cogapsResult: sampleFactors = A matrix, featureLoadings = P matrix
   result <- CoGAPS(expressionMatrix, params, nIterations=1000)
 }
+
 invitroResult <- NMFResult(loginvitroExpression)
-# plots the Cogapsresult
+# plots the Cogapsresult. Samples 1-4 are P130411 replicates, sample 5= P100422
+# Pattern 1 = shared between all data sets?
 plot(invitroResult)
 
 # GAPS function isn't found ?
@@ -73,20 +82,48 @@ plot(invitroResult)
 #plotPatternMarkers(result, loginvitroExpression)
 
 #########
-# ProjectR, returns projectionPatterns = relative weights for samples in feature space
+# ProjectR, PCA plot
+# returns projectionPatterns = relative weights for samples in feature space
+CreateProjectionPattern <- function(expressionMatrix) {
+  pc.expressionMatrix <- prcomp(t(expressionMatrix))
+  pcVAR <- round(((pc.expressionMatrix$sdev)^2/sum(pc.expressionMatrix$sdev^2))*100,2)
+  dPCA <- data.frame(pc.expressionMatrix$x)
+}
 
-pc.loginvitroExpression <- prcomp(t(loginvitroExpression))
-pcVAR <- round(((pc.loginvitroExpression$sdev)^2/sum(pc.loginvitroExpression$sdev^2))*100,2)
-dPCA <- data.frame(cbind(pc.loginvitroExpression$x,pc.loginvitroExpression))
-# ISSUE: getting dPCA into continuous values. transforming/lappy is freezing R Studio
-transform(dPCA, PC1 = as.numeric(levels(PC1)))
+invitroPCA <- CreateProjectionPattern(loginvitroExpression)
 
-pPCA <- ggplot(dPCA, aes(x = PC1, y = PC2)) +
-  geom_point()
+# PCA plot. The 4 replicate 130411 cell lines don't cluster like I would expect
+pPCA <- ggplot(invitroPCA, aes(x = PC1, y = PC2)) +
+  geom_point() + geom_text(aes(label=row.names(invitroPCA)))
 pPCA
 
+#####
+# ICA plots using fastICA
+# X = expmatrix, n.comp = # of components to extract
+invitroICA <- fastICA(loginvitroExpression, n.comp = 2, alg.typ = "parallel", fun = "logcosh", alpha = 1,
+             method = "R", row.norm = FALSE, maxit = 200,
+             tol = 0.0001, verbose = TRUE)
+par(mfrow = c(1, 3))
+plot(invitroICA$X, main = "Pre-processed data")
+plot(invitroICA$X %*% invitroICA$K, main = "PCA components")
+plot(invitroICA$S, main = "ICA components")
 
-# can't get this first part to work for projectR: Obtaining CoGAPS patterns to project.
+#####
+# sample data for ICA
+S <- matrix(runif(10000), 5000, 2)
+A <- matrix(c(1, 1, -1, 3), 2, 2, byrow = TRUE)
+X <- S %*% A
+a <- fastICA(X, 2, alg.typ = "parallel", fun = "logcosh", alpha = 1,
+             method = "C", row.norm = FALSE, maxit = 200,
+             tol = 0.0001, verbose = TRUE)
+par(mfrow = c(1, 3))
+plot(a$X, main = "Pre-processed data")
+plot(a$X %*% a$K, main = "PCA components")
+plot(a$S, main = "ICA components")
+
+#####
+# can't get this projectR for NMF to work
+# stuck on first part: Obtaining CoGAPS patterns to project.
 AP <- get(as.matrix(expSubset)) #CoGAPS run data
 AP <- expSubset$mean
 
@@ -98,7 +135,8 @@ PCAexpSubset <- projectR(data = expSubset, loadings = pc.expSubset, dataNames = 
 
 group <- c('')
 d <- DGEList(counts = expSubset, group = group)
-TMM <- calcNormFactors(expSubset, method="TMM")
+
+TMM <- calcNormFactors(loginvitroExpression, method="TMM")
 expSubset.AUCVCs1 <- gridAUCVC(data = expSubset, dataType = "bk", HG7=
                                  bkRNA18_factors$HG7, ERCC= bkRNA18_factors$ERCC, TN=bkRNA18_factors$TN,
                                TC=bkRNA18_factors$TC, CR=bkRNA18_factors$CR, NR=bkRNA18_factors$NR,
@@ -122,7 +160,8 @@ pc.RNAseq6l3c3t<-prcomp(t(p.RNAseq6l3c3t))
 #variance of the PC
 pcVAR <- round(((pc.RNAseq6l3c3t$sdev)^2/sum(pc.RNAseq6l3c3t$sdev^2))*100,2)
 #x= transposed sample=rows, PCs = col
-dPCA <- data.frame(cbind(pc.RNAseq6l3c3t$x,pd.RNAseq6l3c3t))
+adPCA <- data.frame(cbind(pc.RNAseq6l3c3t$x,pd.RNAseq6l3c3t))
+bdPCA <- data.frame(cbind(pc.RNAseq6l3c3t$x))
 #plot pca
 
 setCOL <- scale_colour_manual(values = c("blue","black","red"), name="Condition:")
@@ -141,7 +180,7 @@ pPCA <- ggplot(dPCA, aes(x=PC1, y=PC2, colour=ID.cond, shape=ID.line,
   labs(title = "PCA of hPSC PolyA RNAseq",
        x=paste("PC1 (",pcVAR[1],"% of varience)",sep=""),
        y=paste("PC2 (",pcVAR[2],"% of varience)",sep=""))
-
+pPCA
 data(p.ESepiGen4c1l)
 PCA2ESepi <- projectR(data = p.ESepiGen4c1l$mRNA.Seq,loadings=pc.RNAseq6l3c3t,
                       full=TRUE, dataNames=map.ESepiGen4c1l[["GeneSymbols"]])
