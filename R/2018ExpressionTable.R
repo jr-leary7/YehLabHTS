@@ -16,38 +16,63 @@ library(fastICA)
 
 setwd("~/YehLabHTS")
 load("/Volumes/Jen Jen Yeh Lab/RNAseq/RData/Yeh_Salmon.RData")
+load("/Volumes/Jen Jen Yeh Lab/RNAseq/RData/Yeh_Salmon_caf_naf_with_fails.RData")
 
-seqMetadata <- read.xlsx(file = "./data/Sequenced_PDX_CAF_lines.xlsx", 1,
-                        header = TRUE)
 
 # P140710N1 was also in the screen but removed from analysis due to
 # a cell line mix-up: P140710N1 matches P140227T1 for STR
-cellLines <- c("P100422", "P130411T1", "P140227", "P170119T1")
+cellLines <- c("100422", "130411", "140227", "170119")
+treatment <- c("untreated", "")
+type <- c("PDXcells")
 
-#filter the metadata file for PDXcell type
-invitroMetadata <- filter(seqMetadata, Line %in% cellLines, Type == "PDXcells")
-invivoMetadata <- filter(seqMetadata, Line %in% cellLines)
+CreateExpressionMatrix <- function(Lines, sampInfo, type, treatment, RData) {
+   combinedFilenames <- c()
+   filename <- c()
+   for (i in 1:length(Lines)){
+     # subset Yeh_Salmon samp info by cell line
+     lineSubset <- sampInfo[grep(Lines[[i]], sampInfo$filename), ]
+     # filter by untreated and unmixed samples
+     lineSubset <- filter(lineSubset, Type %in% type, Treatment_orig %in% treatment, Treatment1 %in% treatment, line != "mix")
 
-#removing a seq file on an organoid
-invitroMetadata <- invitroMetadata[-c(5),]
+     # filename for one line
+     filename <- as.character(lineSubset$filename)
 
-CreateExpressionMatrix <- function(Metadata) {
-  filenames <- Metadata$fpkm_file_header
+     # list of all filenames for every line
+     combinedFilenames <- c(combinedFilenames, filename)
 
-  #expression subset
-  expSubset <- subset(Yeh_Salmon[["ex"]], select = c(filenames))
+     # index by filename to create expression subset (expSub)
+     expSub <- subset(RData[["ex"]], select = c(combinedFilenames))
 
-  # open brackets retain the row names (genes)
-  #ExpSubset[] <- sapply(expSubset[], as.numeric)
+   }
+   return(expSub)
 }
+# Need to remove scramble sgRNA samples *
+invitroExpression <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon$sampInfo,
+                                            type = c("CAF", "PDXcells"), treatment = treatment, RData = Yeh_Salmon)
 
-invitroExpression <- CreateExpressionMatrix(invitroMetadata)
+# expression dataframe of the lines in any type (ie human, organoid, pdx, cell line...)
+totalExpression <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon$sampInfo,
+                                          type = unique(Yeh_Salmon[["sampInfo"]]$Type), treatment = treatment, RData = Yeh_Salmon)
+
+# cell line exp data from another R data (Yeh_Salmon_caf_naf_with_fails)
+invitroCAFNAFSalmon <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon_caf_naf_with_fails$sampInfo,
+                                              type = c("CAF", "PDXcells"), treatment = treatment, RData = Yeh_Salmon_caf_naf_with_fails)
+
+# final dataframe of all cell line expression data
+invitroExpression <- cbind(invitroExpression, invitroCAFNAFSalmon)
+
+# total is no different than invitro
+# totalCAFNAFSalmon <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon_caf_naf_with_fails$sampInfo,
+#                                          type = unique(Yeh_Salmon_caf_naf_with_fails[["sampInfo"]]$Type), treatment = treatment,
+#                                          RData = Yeh_Salmon_caf_naf_with_fails)
+
+
 invitroExpression <- data.matrix(invitroExpression, rownames.force = NA)
 #invitroExpression[] <- sapply(invitroExpression[], as.numeric)
 
 # log transform data
 loginvitroExpression <- log(invitroExpression +1)
-plot(loginvitroExpression)
+# plot(loginvitroExpression)
 
 # normalization
 lib.size <- sum(d$sample1)
@@ -63,7 +88,7 @@ NMFResult <- function(expressionMatrix){
   params <- new("CogapsParams")
 
   # set the value for a specific parameter
-  params <- setParam(params, "nPatterns", 2)
+  params <- setParam(params, "nPatterns", 3)
 
   # run CoGAPS with specified model parameters
   # cogapsResult: sampleFactors = A matrix, featureLoadings = P matrix
@@ -71,9 +96,12 @@ NMFResult <- function(expressionMatrix){
 }
 
 invitroResult <- NMFResult(loginvitroExpression)
-# plots the Cogapsresult. Samples 1-4 are P130411 replicates, sample 5= P100422
+# plots the Cogapsresult. Samples 1-5 are P100422 replicates, samples 6-8= P130411, 9-10= 140227, 11 = 170119
 # Pattern 1 = shared between all data sets?
+dev.off()
 plot(invitroResult)
+axis(labels = TRUE, side = 1)
+ggplot(invitroResult) + geom_point()
 
 # GAPS function isn't found ?
 #resultGAPS <- GAPS(loginvitroExpression, unc=0.01, isPercentError=FALSE, numPatterns = 3)
