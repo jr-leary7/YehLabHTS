@@ -1,7 +1,6 @@
 library(xlsx)
 library(data.table)
 library(tidyverse)
-library(data.table)
 library(dplyr)
 library(projectR) #PCA, NMF
 library(ggplot2)
@@ -13,12 +12,15 @@ library(dendextend)
 library(SCnorm)
 library(edgeR)
 library(fastICA)
+library(NMF)
+library(pheatmap)
+
 
 setwd("~/YehLabHTS")
 load("/Volumes/Jen Jen Yeh Lab/RNAseq/RData/Yeh_Salmon.RData")
-load("/Volumes/Jen Jen Yeh Lab/RNAseq/RData/Yeh_Salmon_caf_naf_with_fails.RData")
+# load("/Volumes/Jen Jen Yeh Lab/RNAseq/RData/Yeh_Salmon_caf_naf_with_fails.RData")
 
-
+#####
 # P140710N1 was also in the screen but removed from analysis due to
 # a cell line mix-up: P140710N1 matches P140227T1 for STR
 cellLines <- c("100422", "130411", "140227", "170119")
@@ -54,14 +56,18 @@ invitroExpression <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Sa
 totalExpression <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon$sampInfo,
                                           type = unique(Yeh_Salmon[["sampInfo"]]$Type), treatment = treatment, RData = Yeh_Salmon)
 
-# cell line exp data from another R data (Yeh_Salmon_caf_naf_with_fails)
-invitroCAFNAFSalmon <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon_caf_naf_with_fails$sampInfo,
-                                              type = c("CAF", "PDXcells"), treatment = treatment, RData = Yeh_Salmon_caf_naf_with_fails)
+treatmentMatrix <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon$sampInfo,
+                                          type = c("CAF", "PDXcells"),
+                                          RData = Yeh_Salmon)
+
+# EDIT: Yeh_Salmon got updated. Only use Yeh_Salmon not Yeh_Salmon_caf_naf_with_fails
+# invitroCAFNAFSalmon <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon_caf_naf_with_fails$sampInfo,
+#                                              type = c("CAF", "PDXcells"), treatment = treatment, RData = Yeh_Salmon_caf_naf_with_fails)
 
 # final dataframe of all cell line expression data
-invitroExpression <- cbind(invitroExpression, invitroCAFNAFSalmon)
+# invitroExpression <- cbind(invitroExpression, invitroCAFNAFSalmon)
 
-# total is no different than invitro
+# total is no different than invitro for Yeh_Salmon_caf_naf_with_fails
 # totalCAFNAFSalmon <- CreateExpressionMatrix(Lines = cellLines, sampInfo = Yeh_Salmon_caf_naf_with_fails$sampInfo,
 #                                          type = unique(Yeh_Salmon_caf_naf_with_fails[["sampInfo"]]$Type), treatment = treatment,
 #                                          RData = Yeh_Salmon_caf_naf_with_fails)
@@ -70,38 +76,82 @@ invitroExpression <- cbind(invitroExpression, invitroCAFNAFSalmon)
 invitroExpression <- data.matrix(invitroExpression, rownames.force = NA)
 #invitroExpression[] <- sapply(invitroExpression[], as.numeric)
 
+M <- length(invitroExpression)
+M <- colnames(invitroExpression)
+tissue <- c(rep("PDX", 8),
+            rep("CAF", 3))
+M <- cbind(M, tissue)
+
 # log transform data
 loginvitroExpression <- log(invitroExpression +1)
+logtotalExpression <- log(totalExpression +1)
 # plot(loginvitroExpression)
 
-# normalization
-lib.size <- sum(d$sample1)
-scale.factors <- calcNormFactors(loginvitroExpression, method = "TMM")
-RPKM <- rpkm(scale.factors)
-norm.data <- t(t(TMM$sample1)/(scale.factors*lib.size))
+saveRDS(loginvitroExpression, file = "in_vitro_exp_df.rds")
+loginvitroExpression <- readRDS(file = "in_vitro_exp_df.rds")
 
 ##########
 # NMF using CoGAPS
 
-NMFResult <- function(expressionMatrix){
+CogapsResult <- function(expressionMatrix){
   # create model parameters object
   params <- new("CogapsParams")
 
   # set the value for a specific parameter
-  params <- setParam(params, "nPatterns", 3)
+  params <- setParam(params, "nPatterns", 2)
 
   # run CoGAPS with specified model parameters
   # cogapsResult: sampleFactors = A matrix, featureLoadings = P matrix
-  result <- CoGAPS(expressionMatrix, params, nIterations=1000)
+  result <- CoGAPS(expressionMatrix, params, nIterations=500)
+  return(result)
 }
 
-invitroResult <- NMFResult(loginvitroExpression)
+# example using k = 2
+invitroResult2 <- CogapsResult(loginvitroExpression)
+
+Amatrix <- invitroResult2@featureLoadings
+Pmatrix <- invitroResult2@sampleFactors
+
+# list of top 50 genes in each pattern
+TopPatterns <- as.matrix(head(sort(Amatrix[ ,1], decreasing = T), n=50))
+Patt2 <- as.matrix(head(sort(Amatrix[ ,2], decreasing = T), n=50))
+TopPatterns <- rbind(TopPatterns, Patt2)
+PattList <- c(row.names(TopPatterns))
+PattExp <- subset(loginvitroExpression, rownames(loginvitroExpression) %in% PattList)
+
+# distinct cluster btwn CAF and PDX
+heatmap.2(PattExp, scale = "none", trace = "none", col = bluered(100), srtCol = 270, keysize = 1)
+pheatmap(PattExp, width = 8, height = 12)
+
+# list of genes for each pattern
+loadings <- getFeatureLoadings(invitroResult4)
+loadings1 <- as.matrix(head(sort(loadings[ ,1], decreasing = T), n=50))
+list1 <- as.list(row.names(loadings1))
+ensemble1 <- Yeh_Salmon[["featInfo"]] %>% filter(rownames == list1)
+
+loadings2 <- as.matrix(head(sort(loadings[ ,2], decreasing = T), n=50))
+loadings3 <- as.matrix(head(sort(loadings[ ,3], decreasing = T), n=50))
+loadings4 <- as.matrix(head(sort(loadings[ ,4], decreasing = T), n=50))
+
+
+# copy and paste row.names(loadings1) to SynGO, then to DAVID
+
+# ERROR- projectR obj not found
+projection <- projectR(loginvitroExpression, invitroResult4)
+
+# patternMarkers function won't work bc object (invitroResult2) is invalid
+# subscript type 'list') ; same object used in getFeatureLoadings
+pattMark <- patternMarkers(invitroResult2())
+#, threshold = "all",               lp = NA, axis = 1)
+
+loginvitroExpression <- as.vector(loginvitroExpression)
+plotPatternMarkers(invitroResult2, loginvitroExpression)
+
 # plots the Cogapsresult. Samples 1-5 are P100422 replicates, samples 6-8= P130411, 9-10= 140227, 11 = 170119
 # Pattern 1 = shared between all data sets?
 dev.off()
-plot(invitroResult)
+plot(invivoNMFResult3)
 axis(labels = TRUE, side = 1)
-ggplot(invitroResult) + geom_point()
 
 # GAPS function isn't found ?
 #resultGAPS <- GAPS(loginvitroExpression, unc=0.01, isPercentError=FALSE, numPatterns = 3)
@@ -119,12 +169,16 @@ CreateProjectionPattern <- function(expressionMatrix) {
 }
 
 invitroPCA <- CreateProjectionPattern(loginvitroExpression)
-
+invivoPCA <- CreateProjectionPattern(logtotalExpression)
 # PCA plot. The 4 replicate 130411 cell lines don't cluster like I would expect
-pPCA <- ggplot(invitroPCA, aes(x = PC1, y = PC2)) +
-  geom_point() + geom_text(aes(label=row.names(invitroPCA)))
+pPCA <- ggplot(invivoPCA, aes(x = PC1, y = PC2)) +
+  geom_point() + geom_text(aes(label=row.names(invivoPCA)))
 pPCA
 
+# total exp PCA plot
+ptPCA <- ggplot(invivoPCA, aes(x = PC1, y = PC2)) +
+  geom_point()
+ptPCA
 #####
 # ICA plots using fastICA
 # X = expmatrix, n.comp = # of components to extract
